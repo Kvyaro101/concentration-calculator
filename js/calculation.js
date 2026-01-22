@@ -33,8 +33,8 @@ class ConcentrationCalculator {
 
     return {
       requiredMassG: massG,
-      formattedMass: massG.toFixed(4),
-      requiredMassMg: (massG * 1000).toFixed(2),
+      formattedMass: massG.toPrecision(8),
+      requiredMassMg: (massG * 1000).toPrecision(8),
     };
   }
 
@@ -49,7 +49,7 @@ class ConcentrationCalculator {
   calculateActualConcentration(params) {
     const { actualMassG, volumeML, substanceMW } = params;
 
-    if (!actualMassG || !volumeML || !substanceMW) {
+    if (actualMassG === null || actualMassG === undefined || !volumeML || !substanceMW) {
       throw new Error('Не все параметры заполнены');
     }
 
@@ -61,7 +61,7 @@ class ConcentrationCalculator {
 
     return {
       actualConcentrationM: concM,
-      formattedConcentration: concM.toFixed(6),
+      formattedConcentration: concM.toPrecision(6),
     };
   }
 
@@ -115,11 +115,16 @@ class ConcentrationCalculator {
     );
 
     // Поправка объёма
-    const volumeCorrectionFactor =
-      this.formulas.calculateVolumeCorrection(
+    const volumeCorrection = this.formulas.calculateVolumeCorrection(
         requiredConcentration,
-        actualResult.actualConcentrationM
-      );
+        actualResult.actualConcentrationM,
+        volumeML,
+    );
+
+    const recommendation =
+      volumeCorrection > 0
+        ? `Добавить ${volumeCorrection.toFixed(4)} мл стока`
+        : `Уменьшить на ${Math.abs(volumeCorrection).toFixed(4)} мл стока`;
 
     return {
       actualConcentration: actualResult.actualConcentrationM,
@@ -127,13 +132,8 @@ class ConcentrationCalculator {
       errorPercent: errorResult.errorPercent,
       formattedError: errorResult.formattedError,
       isAcceptable: errorResult.isAcceptable,
-      volumeCorrectionFactor,
-      // Если нужно добавить V миллилитров буфера (если фактор положительный)
-      volumeCorrectionML: volumeCorrectionFactor * volumeML,
-      recommendation:
-        volumeCorrectionFactor > 0
-          ? `Добавить ≈ ${Math.abs((volumeCorrectionFactor * volumeML).toFixed(2))} мл буфера`
-          : `Добавить на ${Math.abs((volumeCorrectionFactor * 100).toFixed(1))}% меньше стока`,
+      volumeCorrection,
+      recommendation,
     };
   }
 
@@ -159,9 +159,4 @@ class ConcentrationCalculator {
       }
     });
   }
-}
-
-// Export для использования в других модулях
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ConcentrationCalculator;
 }

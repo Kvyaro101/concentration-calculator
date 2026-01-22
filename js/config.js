@@ -1,44 +1,21 @@
 // config.js - Конфигурация веществ и параметры
 
 const SUBSTANCES = {
-  na2so4: {
-    id: 'na2so4',
-    name: 'Na₂SO₄ (дисульфат натрия)',
-    mw: 142.04,
-    category: 'salts',
-    description: 'Салтинг-аут агент'
+  'all-trans-retinal': {
+    id: 'all-trans-retinal',
+    name: 'all-trans-retinal',
+    mw: 284.44,
+    stockConcentration: 5e-3, // 5*10^-3 mol/liter
+    targetConcentration: 5e-6, // 5*10^-6 mol/liter
   },
-  kcl: {
-    id: 'kcl',
-    name: 'KCl (хлорид калия)',
-    mw: 74.55,
-    category: 'salts',
-    description: 'Электролит'
-  },
-  nacl: {
-    id: 'nacl',
-    name: 'NaCl (хлорид натрия)',
-    mw: 58.44,
-    category: 'salts',
-    description: 'Физиологический раствор'
-  },
-  edta: {
-    id: 'edta',
-    name: 'EDTA (этилендиаминтетрауксусная кислота)',
-    mw: 292.24,
-    category: 'chelators',
-    description: 'Хелатор'
-  },
-  tris: {
-    id: 'tris',
-    name: 'Tris (трометамол)',
-    mw: 121.14,
-    category: 'buffers',
-    description: 'Буферный агент'
+  iptg: {
+    id: 'iptg',
+    name: 'IPTG',
+    mw: 238.3,
+    stockConcentration: 1, // 1 mol/liter
+    targetConcentration: 5e-4, // 5*10^-4 mol/liter
   },
 };
-
-const DEFAULT_STOCK_CONCENTRATION = 1.0; // М (по умолчанию)
 const VOLUME_UNITS = {
   ml: { label: 'мл', factor: 1 },
   l: { label: 'л', factor: 1000 },
@@ -97,13 +74,10 @@ const DEFAULT_FORMULAS = {
    * @param actualConcentration - фактическая концентрация
    * @returns поправка объёма в мл
    */
-  calculateVolumeCorrection: (requiredConcentration, actualConcentration) => {
+  calculateVolumeCorrection: (requiredConcentration, actualConcentration, volumeML) => {
     if (actualConcentration === 0) return 0;
-    // V_corr = V * (c_req / c_act - 1)
-    // Но нам нужно вернуть относительную поправку
-    const ratio = requiredConcentration / actualConcentration;
-    return ratio - 1; // в виде множителя
+    return volumeML * (actualConcentration / requiredConcentration - 1);
   },
 };
 
-export { SUBSTANCES, DEFAULT_STOCK_CONCENTRATION, DEFAULT_FORMULAS, VOLUME_UNITS, MASS_UNITS };
+
