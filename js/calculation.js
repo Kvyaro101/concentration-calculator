@@ -1,162 +1,58 @@
-// calculation.js - Ядро расчётов (чистые функции)
+// js/calculation.js
 
-class ConcentrationCalculator {
-  /**
-   * @param {Object} formulas - объект с функциями расчётов
-   * Можно переопределить формулы при создании экземпляра
-   */
-  constructor(formulas = null) {
-    // Импортируем default формулы если не передали custom
-    this.formulas = formulas || DEFAULT_FORMULAS;
-  }
+/**
+ * Calculates the required weight of a substance to achieve a target concentration in a given volume.
+ * @param {object} substance - The substance object from config.js.
+ * @param {number} volume_ml - The target volume in milliliters.
+ * @returns {number} The required weight in grams.
+ */
+function calculateRequiredWeight(substance, volume_ml) {
+    const volume_l = volume_ml / 1000;
+    const moles = substance.targetConcentration * volume_l;
+    const weight_g = moles * substance.molarMass;
+    return weight_g;
+}
 
-  /**
-   * Расчёт требуемой навески для стокового раствора
-   * @param {Object} params
-   *   - volumeML: объём среды в мл
-   *   - targetConcentration: целевая концентрация в М
-   *   - substanceMW: молярная масса вещества в г/моль
-   * @returns {Object} { requiredMassG, formattedMass }
-   */
-  calculateRequiredMass(params) {
-    const { volumeML, targetConcentration, substanceMW } = params;
+/**
+ * Calculates the actual concentration and the required correction.
+ * @param {object} substance - The substance object from config.js.
+ * @param {number} actual_weight_g - The actual weight measured by the user in grams.
+ * @param {number} volume_ml - The target volume in milliliters.
+ * @returns {object} An object containing the actual concentration and the correction volume.
+ */
+function calculateCorrection(substance, actual_weight_g, volume_ml) {
+    const volume_l = volume_ml / 1000;
+    const actual_moles = actual_weight_g / substance.molarMass;
+    const actual_concentration = actual_moles / volume_l;
 
-    if (!volumeML || !targetConcentration || !substanceMW) {
-      throw new Error('Не все параметры заполнены');
+    const moles_needed = (substance.targetConcentration - actual_concentration) * volume_l;
+
+    let correction = {
+        actual_concentration: actual_concentration,
+        correction_volume_ml: 0,
+        correction_needed: false,
+        message: ""
+    };
+
+    if (moles_needed > 0) {
+        // Concentration is too low, need to add more stock solution
+        const volume_of_stock_to_add_l = moles_needed / substance.stockConcentration;
+        correction.correction_volume_ml = volume_of_stock_to_add_l * 1000;
+        correction.correction_needed = true;
+        correction.message = `Add ${correction.correction_volume_ml.toFixed(4)} ml of stock solution.`;
+
+    } else if (moles_needed < 0) {
+        // Concentration is too high
+        correction.correction_needed = true;
+        //This case is tricky. "add less stock" is not an action.
+        //Let's calculate how much more solvent is needed to dilute to target concentration.
+        const new_volume_l = actual_moles / substance.targetConcentration;
+        const solvent_to_add_ml = (new_volume_l - volume_l) * 1000;
+        correction.message = `Concentration is too high. Add ${solvent_to_add_ml.toFixed(2)} ml of solvent to reach the target concentration (total volume will be ${(volume_l * 1000 + solvent_to_add_ml).toFixed(2)} ml).`;
+    } else {
+        // Concentration is correct
+        correction.message = "Concentration is correct.";
     }
 
-    const massG = this.formulas.calculateRequiredMass(
-      volumeML,
-      targetConcentration,
-      substanceMW
-    );
-
-    return {
-      requiredMassG: massG,
-      formattedMass: massG.toPrecision(8),
-      requiredMassMg: (massG * 1000).toPrecision(8),
-    };
-  }
-
-  /**
-   * Расчёт реальной концентрации по внесённой массе
-   * @param {Object} params
-   *   - actualMassG: фактически внесённая масса в г
-   *   - volumeML: объём среды в мл
-   *   - substanceMW: молярная масса вещества в г/моль
-   * @returns {Object} { actualConcentrationM, formattedConcentration }
-   */
-  calculateActualConcentration(params) {
-    const { actualMassG, volumeML, substanceMW } = params;
-
-    if (actualMassG === null || actualMassG === undefined || !volumeML || !substanceMW) {
-      throw new Error('Не все параметры заполнены');
-    }
-
-    const concM = this.formulas.calculateActualConcentration(
-      actualMassG,
-      volumeML,
-      substanceMW
-    );
-
-    return {
-      actualConcentrationM: concM,
-      formattedConcentration: concM.toPrecision(6),
-    };
-  }
-
-  /**
-   * Расчёт погрешности в процентах
-   * @param {number} requiredValue - требуемое значение
-   * @param {number} actualValue - фактическое значение
-   * @returns {Object} { errorPercent, formattedError, isAcceptable }
-   */
-  calculateErrorPercent(requiredValue, actualValue, acceptableErrorPercent = 10) {
-    const errorPercent = this.formulas.calculateErrorPercent(
-      requiredValue,
-      actualValue
-    );
-
-    const isAcceptable = Math.abs(errorPercent) <= acceptableErrorPercent;
-
-    return {
-      errorPercent,
-      formattedError: errorPercent.toFixed(2),
-      isAcceptable,
-      acceptableRange: acceptableErrorPercent,
-    };
-  }
-
-  /**
-   * Полный расчёт реальных результатов
-   * Включает концентрацию, погрешность и рекомендацию по поправке
-   */
-  calculateCompleteResults(params) {
-    const {
-      requiredConcentration,
-      actualMassG,
-      volumeML,
-      substanceMW,
-      acceptableErrorPercent = 10,
-    } = params;
-
-    // Реальная концентрация
-    const actualResult = this.calculateActualConcentration({
-      actualMassG,
-      volumeML,
-      substanceMW,
-    });
-
-    // Погрешность
-    const errorResult = this.calculateErrorPercent(
-      requiredConcentration,
-      actualResult.actualConcentrationM,
-      acceptableErrorPercent
-    );
-
-    // Поправка объёма
-    const volumeCorrection = this.formulas.calculateVolumeCorrection(
-        requiredConcentration,
-        actualResult.actualConcentrationM,
-        volumeML,
-    );
-
-    const recommendation =
-      volumeCorrection > 0
-        ? `Добавить ${volumeCorrection.toFixed(4)} мл стока`
-        : `Уменьшить на ${Math.abs(volumeCorrection).toFixed(4)} мл стока`;
-
-    return {
-      actualConcentration: actualResult.actualConcentrationM,
-      formattedConcentration: actualResult.formattedConcentration,
-      errorPercent: errorResult.errorPercent,
-      formattedError: errorResult.formattedError,
-      isAcceptable: errorResult.isAcceptable,
-      volumeCorrection,
-      recommendation,
-    };
-  }
-
-  /**
-   * Расчёт для нескольких веществ одновременно
-   * @param {Array} substancesParams - массив объектов параметров
-   * @returns {Array} массив результатов
-   */
-  calculateBatch(substancesParams) {
-    return substancesParams.map(params => {
-      try {
-        return {
-          ...params,
-          result: this.calculateRequiredMass(params),
-          error: null,
-        };
-      } catch (err) {
-        return {
-          ...params,
-          result: null,
-          error: err.message,
-        };
-      }
-    });
-  }
+    return correction;
 }

@@ -1,201 +1,76 @@
-// ui.js - Управление интерфейсом и DOM
+// js/ui.js
 
-class UIManager {
-  constructor(config) {
-    this.config = config;
-    this.substanceRows = new Map(); // Отслеживание добавленных веществ
-  }
+document.addEventListener('DOMContentLoaded', () => {
+    const substancesContainer = document.getElementById('substances');
+    const volumeInput = document.getElementById('volume');
+    const calculateInitialBtn = document.getElementById('calculate-initial');
+    const calculateCorrectionBtn = document.getElementById('calculate-correction');
+    const resultsContainer = document.getElementById('results');
+    const resultDetailsContainer = document.getElementById('result-details');
 
-  /**
-   * Инициализация UI - создание изначальной формы
-   */
-  init() {
-    this.renderSubstances();
-    this.setupEventListeners();
-  }
-
-  /**
-   * Привязка обработчиков событий
-   */
-  setupEventListeners() {
-    const btnCalculateRequired = document.getElementById('btn-calculate-required');
-    if (btnCalculateRequired) {
-      btnCalculateRequired.addEventListener('click', () => {
-        if (window.app) window.app.onCalculateStockRequirements();
-      });
+    // Dynamically create substance sections
+    for (const key in substances) {
+        const substance = substances[key];
+        const substanceEl = document.createElement('div');
+        substanceEl.classList.add('substance');
+        substanceEl.id = `substance-${key}`;
+        substanceEl.innerHTML = `
+            <h3>${substance.name}</h3>
+            <p>Required weight: <span id="required-weight-${key}">-</span> g</p>
+            <div>
+                <label for="actual-weight-${key}">Actual Weight (g):</label>
+                <input type="number" id="actual-weight-${key}" class="actual-weight" step="any">
+            </div>
+        `;
+        substancesContainer.appendChild(substanceEl);
     }
 
-    this.substanceRows.forEach((row, substanceId) => {
-        const btnCalculateCorrection = document.getElementById(`btn-calculate-correction-${substanceId}`);
-        if (btnCalculateCorrection) {
-            btnCalculateCorrection.addEventListener('click', () => {
-                if (window.app) window.app.onCalculateCorrection(substanceId);
-            });
-        }
-    });
-  }
-
-  /**
-   * Рендеринг всех веществ из конфига
-   */
-  renderSubstances() {
-    const container = document.getElementById('substances-container');
-    container.innerHTML = ''; // Очищаем контейнер
-
-    Object.values(this.config.SUBSTANCES).forEach(substance => {
-      const rowId = `substance-row-${substance.id}`;
-      const row = document.createElement('div');
-      row.className = 'substance-row';
-      row.id = rowId;
-
-      row.innerHTML = `
-        <div class="substance-group">
-          <label>Вещество:</label>
-          <span class="substance-name">${substance.name}</span>
-        </div>
-
-        <div class="results-section">
-          <div class="result-box required-result">
-            <h4>Требуемая навеска:</h4>
-            <p class="result-value" id="required-mass-${substance.id}">-</p>
-            <small class="result-unit">г</small>
-          </div>
-        </div>
-
-        <div class="actual-mass-section">
-            <label for="actual-mass-${substance.id}">Реальная навеска (г):</label>
-            <input type="number" id="actual-mass-${substance.id}" class="actual-mass-input" placeholder="0.0" step="0.0001">
-            <button class="btn btn-secondary" id="btn-calculate-correction-${substance.id}">Рассчитать коррекцию</button>
-        </div>
-        
-        <div class="results-section">
-            <div class="result-box actual-result">
-                <h4>Реальная концентрация:</h4>
-                <p class="result-value" id="actual-concentration-${substance.id}">-</p>
-                <small class="result-unit">М</small>
-            </div>
-            <div class="result-box error-result">
-                <h4>Погрешность:</h4>
-                <p class="result-value" id="error-${substance.id}">-</p>
-                <small class="result-unit">%</small>
-            </div>
-            <div class="result-box correction-result">
-                <h4>Коррекция:</h4>
-                <p class="result-value" id="correction-${substance.id}">-</p>
-            </div>
-        </div>
-      `;
-
-      container.appendChild(row);
-      this.substanceRows.set(substance.id, {
-        rowId: rowId,
-        requiredResult: row.querySelector(`#required-mass-${substance.id}`),
-        actualMassInput: row.querySelector(`#actual-mass-${substance.id}`),
-        actualConcentration: row.querySelector(`#actual-concentration-${substance.id}`),
-        error: row.querySelector(`#error-${substance.id}`),
-        correction: row.querySelector(`#correction-${substance.id}`),
-      });
-    });
-  }
-
-  /**
-   * Получение данных из формы для расчёта требуемых масс
-   * @returns {Array} массив объектов с параметрами
-   */
-  getRequiredMassInputs() {
-    const inputs = [];
-    const volume = parseFloat(document.getElementById('volume-input').value);
-
-    if (!volume || volume <= 0) {
-      throw new Error('Заполните поле "Объём среды" положительным значением');
-    }
-
-    this.substanceRows.forEach((row, substanceId) => {
-      const substance = this.config.SUBSTANCES[substanceId];
-      if (!substance) {
-        throw new Error(`Вещество не найдено: ${substanceId}`);
-      }
-
-      inputs.push({
-        rowId: substance.id,
-        substanceId,
-        substanceName: substance.name,
-        volumeML: volume,
-        targetConcentration: substance.targetConcentration,
-        substanceMW: substance.mw,
-      });
-    });
-
-    return inputs;
-  }
-
-    /**
-   * Получение данных из формы для расчёта коррекции
-   */
-    getActualMassInputs(substanceId) {
-        const volume = parseFloat(document.getElementById('volume-input').value);
-        if (!volume || volume <= 0) {
-            throw new Error('Заполните поле "Объём среды" положительным значением');
-        }
-
-        const substance = this.config.SUBSTANCES[substanceId];
-        if (!substance) {
-            throw new Error(`Вещество не найдено: ${substanceId}`);
-        }
-
-        const row = this.substanceRows.get(substanceId);
-        const actualMassG = parseFloat(row.actualMassInput.value);
-
-        if (isNaN(actualMassG) || actualMassG < 0) {
-            throw new Error(`Введите корректное значение реальной навески для ${substance.name}`);
-        }
-
-        return {
-            substanceId,
-            volumeML: volume,
-            actualMassG,
-            substanceMW: substance.mw,
-            requiredConcentration: substance.targetConcentration,
-        };
-    }
-
-  /**
-   * Отобразить результаты требуемых масс
-   */
-  displayRequiredMassResults(results) {
-    results.forEach(result => {
-      if (result.error) {
-        this.showError(result.error);
-        return;
-      }
-      const row = this.substanceRows.get(result.substanceId);
-      if (row) {
-        row.requiredResult.textContent = `${result.result.formattedMass}`;
-      }
-    });
-  }
-
-    /**
-     * Отобразить результаты коррекции
-     */
-    displayCorrectionResults(substanceId, results) {
-        if (results.error) {
-            this.showError(results.error);
+    calculateInitialBtn.addEventListener('click', () => {
+        const volume_ml = parseFloat(volumeInput.value);
+        if (isNaN(volume_ml) || volume_ml <= 0) {
+            alert('Please enter a valid volume.');
             return;
         }
 
-        const row = this.substanceRows.get(substanceId);
-        if (row) {
-            row.actualConcentration.textContent = results.formattedConcentration;
-            row.error.textContent = results.formattedError;
-            row.correction.textContent = results.recommendation;
+        for (const key in substances) {
+            const substance = substances[key];
+            const requiredWeight = calculateRequiredWeight(substance, volume_ml);
+            document.getElementById(`required-weight-${key}`).textContent = requiredWeight.toExponential(4);
         }
-    }
 
-  /**
-   * Показать ошибку пользователю
-   */
-  showError(message) {
-    alert(`❌ Ошибка: ${message}`);
-  }
-}
+        calculateCorrectionBtn.classList.remove('hidden');
+    });
+
+    calculateCorrectionBtn.addEventListener('click', () => {
+        const volume_ml = parseFloat(volumeInput.value);
+        if (isNaN(volume_ml) || volume_ml <= 0) {
+            alert('Please enter a valid volume.');
+            return;
+        }
+
+        resultDetailsContainer.innerHTML = ''; // Clear previous results
+
+        for (const key in substances) {
+            const substance = substances[key];
+            const actualWeightInput = document.getElementById(`actual-weight-${key}`);
+            const actual_weight_g = parseFloat(actualWeightInput.value);
+
+            if (isNaN(actual_weight_g) || actual_weight_g < 0) {
+                alert(`Please enter a valid actual weight for ${substance.name}.`);
+                continue;
+            }
+
+            const correction = calculateCorrection(substance, actual_weight_g, volume_ml);
+
+            const resultEl = document.createElement('div');
+            resultEl.innerHTML = `
+                <h4>${substance.name}</h4>
+                <p>Actual Concentration: ${correction.actual_concentration.toExponential(4)} mol/L</p>
+                <p>Correction: ${correction.message}</p>
+            `;
+            resultDetailsContainer.appendChild(resultEl);
+        }
+
+        resultsContainer.classList.remove('hidden');
+    });
+});

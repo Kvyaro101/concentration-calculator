@@ -1,47 +1,42 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧪 Калькулятор для all-trans-retinal и IPTG</title>
+    <title>Molarity Calculator</title>
+    <style>
+        body { font-family: sans-serif; }
+        .container { max-width: 600px; margin: auto; padding: 20px; }
+        .substance { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Калькулятор для all-trans-retinal и IPTG</h1>
-            <p>Расчет навески и коррекции для приготовления раствора</p>
-        </header>
+        <h1>Molarity Calculator</h1>
 
-        <div class="content">
-            <!-- TAB 1: Расчёт требуемых масс -->
-            <div id="tab-calculate" class="tab-content active">
-
-
-                <div class="input-group">
-                    <label>Объём среды (мл):</label>
-                    <input type="number" id="volume-input" placeholder="1000" step="0.01" />
-                </div>
-
-                <div id="substances-container"></div>
-
-                <div class="controls">
-                    <button class="btn btn-primary" id="btn-calculate-required">
-                        ✓ Рассчитать требуемую навеску
-                    </button>
-                </div>
-            </div>
+        <div>
+            <label for="volume">Target Volume (ml):</label>
+            <input type="number" id="volume" value="1000">
+            <button id="calculate-initial">Calculate Required Weight</button>
         </div>
 
-        <footer>
-            <p>
-                Калькулятор основан на формуле: <code>m = c × M × V / 1000</code><br>
-                где <code>m</code> — масса (г), <code>c</code> — концентрация (М),
-                <code>M</code> — молярная масса (г/моль), <code>V</code> — объём (мл)
-            </p>
-        </footer>
+        <hr>
+
+        <div id="substances">
+            <!-- Substance sections will be dynamically generated here -->
+        </div>
+
+        <hr>
+
+        <button id="calculate-correction" class="hidden">Calculate Correction</button>
+
+        <div id="results" class="hidden">
+            <h2>Results</h2>
+            <div id="result-details"></div>
+        </div>
     </div>
 
-    <!-- Подключение модулей (порядок важен!) -->
     <script src="js/config.js"></script>
     <script src="js/calculation.js"></script>
     <script src="js/ui.js"></script>
