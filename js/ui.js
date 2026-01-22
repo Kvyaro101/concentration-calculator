@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const key in substances) {
             const substance = substances[key];
             const requiredWeight = calculateRequiredWeight(substance, volume_ml);
-            document.getElementById(`required-weight-${key}`).textContent = requiredWeight.toExponential(4);
+            document.getElementById(`required-weight-${key}`).textContent = requiredWeight.toFixed(8);
         }
 
         calculateCorrectionBtn.classList.remove('hidden');
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultEl = document.createElement('div');
             resultEl.innerHTML = `
                 <h4>${substance.name}</h4>
-                <p>Actual Concentration: ${correction.actual_concentration.toExponential(4)} mol/L</p>
+                <p>Actual Concentration: ${correction.actual_concentration.toFixed(8)} mol/L</p>
                 <p>Correction: ${correction.message}</p>
             `;
             resultDetailsContainer.appendChild(resultEl);

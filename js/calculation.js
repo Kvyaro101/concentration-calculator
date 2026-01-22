@@ -39,7 +39,7 @@ function calculateCorrection(substance, actual_weight_g, volume_ml) {
         const volume_of_stock_to_add_l = moles_needed / substance.stockConcentration;
         correction.correction_volume_ml = volume_of_stock_to_add_l * 1000;
         correction.correction_needed = true;
-        correction.message = `Add ${correction.correction_volume_ml.toFixed(4)} ml of stock solution.`;
+        correction.message = `Add ${correction.correction_volume_ml.toFixed(6)} ml of stock solution.`;
 
     } else if (moles_needed < 0) {
         // Concentration is too high
@@ -48,7 +48,7 @@ function calculateCorrection(substance, actual_weight_g, volume_ml) {
         //Let's calculate how much more solvent is needed to dilute to target concentration.
         const new_volume_l = actual_moles / substance.targetConcentration;
         const solvent_to_add_ml = (new_volume_l - volume_l) * 1000;
-        correction.message = `Concentration is too high. Add ${solvent_to_add_ml.toFixed(2)} ml of solvent to reach the target concentration (total volume will be ${(volume_l * 1000 + solvent_to_add_ml).toFixed(2)} ml).`;
+        correction.message = `Concentration is too high. Add ${solvent_to_add_ml.toFixed(4)} ml of solvent to reach the target concentration (total volume will be ${(volume_l * 1000 + solvent_to_add_ml).toFixed(4)} ml).`;
     } else {
         // Concentration is correct
         correction.message = "Concentration is correct.";
