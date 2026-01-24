@@ -8,22 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsContainer = document.getElementById('results');
     const resultDetailsContainer = document.getElementById('result-details');
 
-    // Dynamically create substance sections
-    for (const key in substances) {
-        const substance = substances[key];
-        const substanceEl = document.createElement('div');
-        substanceEl.classList.add('substance');
-        substanceEl.id = `substance-${key}`;
-        substanceEl.innerHTML = `
-            <h3>${substance.name}</h3>
-            <p>Required weight: <span id="required-weight-${key}">-</span> g</p>
-            <div>
-                <label for="actual-weight-${key}">Actual Weight (g):</label>
-                <input type="number" id="actual-weight-${key}" class="actual-weight" step="any">
-            </div>
-        `;
-        substancesContainer.appendChild(substanceEl);
-    }
+    // Dynamically create substance sections using the function from ui.js
+    createSubstanceUI(substances, substancesContainer);
 
     calculateInitialBtn.addEventListener('click', () => {
         const volume_ml = parseFloat(volumeInput.value);
